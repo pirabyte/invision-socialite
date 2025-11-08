@@ -17,7 +17,7 @@ class InvisionProvider extends AbstractProvider
     /**
      * The base URL of the Invision Community installation.
      */
-    protected string $baseUrl;
+    protected ?string $baseUrl = null;
 
     /**
      * The OAuth scopes to request.
@@ -48,12 +48,14 @@ class InvisionProvider extends AbstractProvider
     {
         $configArray = $config->get();
 
-        if (isset($configArray['base_url'])) {
+        if (isset($configArray['base_url']) && $configArray['base_url']) {
             $this->baseUrl = rtrim($configArray['base_url'], '/');
         }
 
-        if (isset($configArray['scopes'])) {
-            $this->scopes = $configArray['scopes'] ?: ['profile', 'email'];
+        if (isset($configArray['scopes']) && !empty($configArray['scopes'])) {
+            $this->scopes = $configArray['scopes'];
+        } elseif (empty($this->scopes)) {
+            $this->scopes = ['profile', 'email'];
         }
 
         return $this;
@@ -71,15 +73,23 @@ class InvisionProvider extends AbstractProvider
      */
     public function __construct(
         Request $request,
-        ?string $clientId,
-        ?string $clientSecret,
-        ?string $redirectUrl,
-        ?string $baseUrl,
+        ?string $clientId = null,
+        ?string $clientSecret = null,
+        ?string $redirectUrl = null,
+        ?string $baseUrl = null,
         array $scopes = []
     ) {
         parent::__construct($request, $clientId, $clientSecret, $redirectUrl);
-        $this->baseUrl = rtrim($baseUrl ?? '', '/');
-        $this->scopes = $scopes ?: ['profile', 'email'];
+        
+        if ($baseUrl !== null) {
+            $this->baseUrl = rtrim($baseUrl, '/');
+        }
+        
+        if (!empty($scopes)) {
+            $this->scopes = $scopes;
+        } else {
+            $this->scopes = ['profile', 'email'];
+        }
     }
 
     /**
@@ -90,6 +100,10 @@ class InvisionProvider extends AbstractProvider
      */
     protected function getAuthUrl($state): string
     {
+        if ($this->baseUrl === null) {
+            throw new \RuntimeException('Base URL is not configured. Please set base_url in your services configuration.');
+        }
+        
         return $this->buildAuthUrlFromBase("{$this->baseUrl}/oauth/authorize", $state);
     }
 
@@ -100,6 +114,10 @@ class InvisionProvider extends AbstractProvider
      */
     protected function getTokenUrl(): string
     {
+        if ($this->baseUrl === null) {
+            throw new \RuntimeException('Base URL is not configured. Please set base_url in your services configuration.');
+        }
+        
         return "{$this->baseUrl}/oauth/token";
     }
 
@@ -111,6 +129,10 @@ class InvisionProvider extends AbstractProvider
      */
     protected function getUserByToken($token): array
     {
+        if ($this->baseUrl === null) {
+            throw new \RuntimeException('Base URL is not configured. Please set base_url in your services configuration.');
+        }
+        
         $response = $this->getHttpClient()->request('GET', "{$this->baseUrl}/api/member/me", [
             'headers' => [
                 'Accept' => 'application/json',
