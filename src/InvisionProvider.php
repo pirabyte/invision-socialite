@@ -2,9 +2,8 @@
 
 namespace Pirabyte\InvisionSocialite;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Laravel\Socialite\Two\AbstractProvider;
+use SocialiteProviders\Manager\OAuth2\AbstractProvider;
 use SocialiteProviders\Manager\Contracts\ConfigInterface;
 
 /**
@@ -15,6 +14,13 @@ use SocialiteProviders\Manager\Contracts\ConfigInterface;
 class InvisionProvider extends AbstractProvider
 {
     /**
+     * The additional config keys that are allowed to be retrieved from the config.
+     *
+     * @var array<string>
+     */
+    protected static array $additionalConfigKeys = ['base_url', 'scopes'];
+
+    /**
      * The base URL of the Invision Community installation.
      */
     protected ?string $baseUrl = null;
@@ -24,17 +30,7 @@ class InvisionProvider extends AbstractProvider
      *
      * @var array<string>
      */
-    protected $scopes = [];
-
-    /**
-     * Get the additional config keys that are allowed to be retrieved from the config.
-     *
-     * @return array<string>
-     */
-    public static function additionalConfigKeys(): array
-    {
-        return ['base_url', 'scopes'];
-    }
+    protected $scopes = ['profile', 'email'];
 
     /**
      * Set the configuration for the provider.
@@ -46,50 +42,21 @@ class InvisionProvider extends AbstractProvider
      */
     public function setConfig(ConfigInterface $config)
     {
-        $configArray = $config->get();
+        // Call parent to set client_id, client_secret, and redirect
+        parent::setConfig($config);
 
-        if (isset($configArray['base_url']) && $configArray['base_url']) {
-            $this->baseUrl = rtrim($configArray['base_url'], '/');
+        // Set additional config values
+        $baseUrl = $this->getConfig('base_url');
+        if ($baseUrl) {
+            $this->baseUrl = rtrim($baseUrl, '/');
         }
 
-        if (isset($configArray['scopes']) && !empty($configArray['scopes'])) {
-            $this->scopes = $configArray['scopes'];
-        } elseif (empty($this->scopes)) {
-            $this->scopes = ['profile', 'email'];
+        $scopes = $this->getConfig('scopes');
+        if (!empty($scopes)) {
+            $this->scopes = $scopes;
         }
 
         return $this;
-    }
-
-    /**
-     * Create a new provider instance.
-     *
-     * @param  Request  $request
-     * @param  string|null  $clientId
-     * @param  string|null  $clientSecret
-     * @param  string|null  $redirectUrl
-     * @param  string|null  $baseUrl
-     * @param  array<string>  $scopes
-     */
-    public function __construct(
-        Request $request,
-        ?string $clientId = null,
-        ?string $clientSecret = null,
-        ?string $redirectUrl = null,
-        ?string $baseUrl = null,
-        array $scopes = []
-    ) {
-        parent::__construct($request, $clientId, $clientSecret, $redirectUrl);
-        
-        if ($baseUrl !== null) {
-            $this->baseUrl = rtrim($baseUrl, '/');
-        }
-        
-        if (!empty($scopes)) {
-            $this->scopes = $scopes;
-        } else {
-            $this->scopes = ['profile', 'email'];
-        }
     }
 
     /**
@@ -100,11 +67,8 @@ class InvisionProvider extends AbstractProvider
      */
     protected function getAuthUrl($state): string
     {
-        if ($this->baseUrl === null) {
-            throw new \RuntimeException('Base URL is not configured. Please set base_url in your services configuration.');
-        }
-        
-        return $this->buildAuthUrlFromBase("{$this->baseUrl}/oauth/authorize", $state);
+        $baseUrl = $this->getBaseUrl();
+        return $this->buildAuthUrlFromBase("{$baseUrl}/oauth/authorize", $state);
     }
 
     /**
@@ -114,11 +78,8 @@ class InvisionProvider extends AbstractProvider
      */
     protected function getTokenUrl(): string
     {
-        if ($this->baseUrl === null) {
-            throw new \RuntimeException('Base URL is not configured. Please set base_url in your services configuration.');
-        }
-        
-        return "{$this->baseUrl}/oauth/token";
+        $baseUrl = $this->getBaseUrl();
+        return "{$baseUrl}/oauth/token";
     }
 
     /**
@@ -129,11 +90,9 @@ class InvisionProvider extends AbstractProvider
      */
     protected function getUserByToken($token): array
     {
-        if ($this->baseUrl === null) {
-            throw new \RuntimeException('Base URL is not configured. Please set base_url in your services configuration.');
-        }
+        $baseUrl = $this->getBaseUrl();
         
-        $response = $this->getHttpClient()->request('GET', "{$this->baseUrl}/api/member/me", [
+        $response = $this->getHttpClient()->request('GET', "{$baseUrl}/api/member/me", [
             'headers' => [
                 'Accept' => 'application/json',
                 'Authorization' => "Bearer {$token}",
@@ -148,6 +107,27 @@ class InvisionProvider extends AbstractProvider
         }
 
         return $user ?? [];
+    }
+
+    /**
+     * Get the base URL from config or cached value.
+     *
+     * @return string
+     * @throws \RuntimeException
+     */
+    protected function getBaseUrl(): string
+    {
+        if ($this->baseUrl !== null) {
+            return $this->baseUrl;
+        }
+
+        $baseUrl = $this->getConfig('base_url');
+        if (!$baseUrl) {
+            throw new \RuntimeException('Base URL is not configured. Please set base_url in your services configuration.');
+        }
+
+        $this->baseUrl = rtrim($baseUrl, '/');
+        return $this->baseUrl;
     }
 
     /**
