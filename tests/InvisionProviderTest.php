@@ -8,7 +8,8 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Http\Request;
 use PHPUnit\Framework\TestCase;
-use Pirabyte\InvisionSocialite\InvisionProvider;
+use Pirabyte\InvisionSocialite\Provider;
+use SocialiteProviders\Manager\Config;
 
 class InvisionProviderTest extends TestCase
 {
@@ -16,14 +17,21 @@ class InvisionProviderTest extends TestCase
     {
         $request = Request::create('/', 'GET');
 
-        $provider = new InvisionProvider(
+        $provider = new Provider(
             $request,
             'clientId',
             'secret',
-            'https://app/callback',
-            'https://community.example.com',
-            []
+            'https://app/callback'
         );
+
+        $config = new Config(
+            'clientId',
+            'secret',
+            'https://app/callback',
+            ['base_url' => 'https://community.example.com']
+        );
+
+        $provider->setConfig($config);
 
         $response = $provider->stateless()->redirect();
         $url = $response->getTargetUrl();
@@ -53,15 +61,21 @@ class InvisionProviderTest extends TestCase
         $handlerStack = HandlerStack::create($mock);
         $client = new Client(['handler' => $handlerStack]);
 
-        $provider = new InvisionProvider(
+        $provider = new Provider(
             $request,
             'clientId',
             'secret',
-            'https://app/callback',
-            'https://community.example.com',
-            []
+            'https://app/callback'
         );
 
+        $config = new Config(
+            'clientId',
+            'secret',
+            'https://app/callback',
+            ['base_url' => 'https://community.example.com']
+        );
+
+        $provider->setConfig($config);
         $provider->setHttpClient($client);
 
         $user = $provider->userFromToken('fake-token');
@@ -95,15 +109,21 @@ class InvisionProviderTest extends TestCase
         $handlerStack = HandlerStack::create($mock);
         $client = new Client(['handler' => $handlerStack]);
 
-        $provider = new InvisionProvider(
+        $provider = new Provider(
             $request,
             'clientId',
             'secret',
-            'https://app/callback',
-            'https://community.example.com',
-            []
+            'https://app/callback'
         );
 
+        $config = new Config(
+            'clientId',
+            'secret',
+            'https://app/callback',
+            ['base_url' => 'https://community.example.com']
+        );
+
+        $provider->setConfig($config);
         $provider->setHttpClient($client);
 
         $user = $provider->stateless()->user();

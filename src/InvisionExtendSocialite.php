@@ -21,7 +21,7 @@ class InvisionExtendSocialite
     {
         $socialiteWasCalled->extendSocialite(
             'invision',
-            InvisionProvider::class
+            Provider::class
         );
     }
 }
