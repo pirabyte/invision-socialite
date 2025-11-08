@@ -1,0 +1,39 @@
+{
+  "name": "pirabyte/invision-socialite",
+  "description": "Laravel Socialite provider for Invision Community (IPS) SSO",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": "^8.3",
+    "laravel/socialite": "^5.23",
+    "socialiteproviders/manager": "^4.8",
+    "guzzlehttp/guzzle": "^7.10"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5",
+    "mockery/mockery": "^1.6",
+    "laravel/pint": "^1.25" 
+  },
+  "autoload": {
+    "psr-4": {
+      "Pirabyte\\InvisionSocialite\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Pirabyte\\InvisionSocialite\\InvisionServiceProvider"
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "pint",
+    "test": "phpunit",
+    "test:ci": "phpunit --coverage-clover build/logs/clover.xml"
+  }
+}
