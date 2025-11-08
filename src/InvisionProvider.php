@@ -5,6 +5,7 @@ namespace Pirabyte\InvisionSocialite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Laravel\Socialite\Two\AbstractProvider;
+use SocialiteProviders\Manager\Contracts\ConfigInterface;
 
 /**
  * Invision Community OAuth2 Provider for Laravel Socialite.
@@ -23,7 +24,40 @@ class InvisionProvider extends AbstractProvider
      *
      * @var array<string>
      */
-    protected array $scopes = [];
+    protected $scopes = [];
+
+    /**
+     * Get the additional config keys that are allowed to be retrieved from the config.
+     *
+     * @return array<string>
+     */
+    public static function additionalConfigKeys(): array
+    {
+        return ['base_url', 'scopes'];
+    }
+
+    /**
+     * Set the configuration for the provider.
+     *
+     * This method is called by the SocialiteProviders Manager to set additional config keys.
+     *
+     * @param  ConfigInterface  $config
+     * @return $this
+     */
+    public function setConfig(ConfigInterface $config)
+    {
+        $configArray = $config->get();
+
+        if (isset($configArray['base_url'])) {
+            $this->baseUrl = rtrim($configArray['base_url'], '/');
+        }
+
+        if (isset($configArray['scopes'])) {
+            $this->scopes = $configArray['scopes'] ?: ['profile', 'email'];
+        }
+
+        return $this;
+    }
 
     /**
      * Create a new provider instance.
